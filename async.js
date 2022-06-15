@@ -72,7 +72,7 @@ function forEachParallel() {
 	})
 */
 
-function simpleCluster() {
+async function simpleCluster() {
 	let mainFunction, workerFunction, singleThread;
 	switch (arguments.length) {
 		case 2: [ mainFunction, workerFunction ] = arguments; break;
@@ -81,10 +81,10 @@ function simpleCluster() {
 			throw Error('simpleCluster( [ singleThread, ] mainFunction, workerFunction )')
 	}
 
-	if (singleThread) return mainFunction(workerFunction);
+	if (singleThread) return await mainFunction(workerFunction);
 	
 	if (cluster.isMaster) {
-		mainFunction(function (...args) {
+		await mainFunction(function (...args) {
 			return new Promise(res => {
 				let worker = cluster.fork();
 				worker.on('online', () => worker.send(args))
@@ -94,6 +94,7 @@ function simpleCluster() {
 	} else if (cluster.isWorker) {
 		process.on('message', async args => {
 			let response = await workerFunction(...args);
+			response ??= null;
 			process.send(response, () => process.exit());
 		})
 	}
