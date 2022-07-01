@@ -84,17 +84,21 @@ async function simpleCluster() {
 	if (singleThread) return await mainFunction(workerFunction);
 	
 	if (cluster.isMaster) {
-		await mainFunction(function (...args) {
-			return new Promise(res => {
+		await mainFunction(function (...parameters) {
+			return new Promise(resolve => {
 				let worker = cluster.fork();
-				worker.on('online', () => worker.send(args))
-				worker.on('message', response => res(response));
+				worker.on('online', () => worker.send(({parameters})))
+				worker.on('message', response => resolve(response));
 			})
 		})
 	} else if (cluster.isWorker) {
-		process.on('message', async args => {
-			let response = await workerFunction(...args);
-			response ??= null;
+		process.on('message', async ({parameters}) => {
+			let response = {};
+			try {
+				response.result = await workerFunction(...parameters);
+			} catch (error) {
+				response.error = error;
+			}
 			process.send(response, () => process.exit());
 		})
 	}
