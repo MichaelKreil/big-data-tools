@@ -3,8 +3,6 @@
 const cluster = require('cluster');
 const os = require('os');
 
-Array.prototype.forEachParallel = forEachParallel;
-
 module.exports = {
 	simpleCluster,
 }
