@@ -85,10 +85,16 @@ async function simpleCluster() {
 	
 	if (cluster.isMaster) {
 		await mainFunction(function (...parameters) {
-			return new Promise(resolve => {
+			return new Promise((resolve, reject) => {
 				let worker = cluster.fork();
 				worker.on('online', () => worker.send(({parameters})))
-				worker.on('message', response => resolve(response));
+				worker.on('message', response => {
+					if (response.error) {
+						let error = Object.assign(new Error(), response.error);
+						return reject(error)
+					}
+					return resolve(response.result);
+				});
 			})
 		})
 	} else if (cluster.isWorker) {
@@ -97,7 +103,11 @@ async function simpleCluster() {
 			try {
 				response.result = await workerFunction(...parameters);
 			} catch (error) {
-				response.error = error;
+				response.error = {
+					message: error.message,
+					stack: error.stack,
+					name: error.name,
+				}
 			}
 			process.send(response, () => process.exit());
 		})
